@@ -45,9 +45,26 @@
     animation: blink 1s steps(3, end) infinite
 }
 
+.editor-selection-container {
+    display: flex;
+    position: absolute;
+    top: 0px;
+    right: 0px;
+    left: 0px;
+    bottom: 0px;
+}
+
+.selection {
+    background-color: #1122aa;
+    color: #fff;
+}
 
 .editor-cursor-container {
     display: none;
+}
+
+.hidden {
+    visibility: hidden;
 }
 
 @keyframes blink {

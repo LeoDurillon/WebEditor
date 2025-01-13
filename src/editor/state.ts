@@ -12,12 +12,49 @@ export default class State {
     cursorX: number = 0
     cursorY: number = 0
 
-    selectStart: [number, number] = [0, 0];
-    selectEnd: [number, number] = [0, 0];
+    selectX: number = -1;
+    selectY: number = -1;
 
     constructor(public lang: Language, public theme: Theme, public element: DOMElement, public container: DOMElement) {
     }
 
+    startSelection() {
+        this.selectX = this.cursorX;
+        this.selectY = this.cursorY;
+    }
+
+    getSelectionOrder() {
+        const startY = this.cursorY <= this.selectY ? this.cursorY : this.selectY;
+        const endY = this.cursorY >= this.selectY ? this.cursorY : this.selectY;
+        const startX = this.cursorY < this.selectY ? this.cursorX : this.cursorY > this.selectY ? this.selectX : this.cursorX < this.selectX ? this.cursorX : this.selectX;
+        const endX = this.cursorY < this.selectY ? this.selectX : this.cursorY > this.selectY ? this.cursorX : this.cursorX < this.selectX ? this.selectX : this.cursorX;
+
+        return {
+            startY,
+            endY,
+            startX,
+            endX
+        }
+    }
+
+    drawSelection() {
+        const order = this.getSelectionOrder();
+        const elements = this.childrens.slice(order.startY, order.endY + 1);
+
+        elements.forEach((el, i) => {
+            el.className = "active";
+            const text = this.getLineValue(order.startY + i);
+            const selectionStart = i === 0 ? order.startX : 0
+            const selectionEnd = i === elements.length - 1 ? order.endX : text.length
+            const div = document.createElement("div");
+            div.className = "editor-selection-container"
+            const pre = document.createElement("pre");
+            pre.className = "selection"
+            pre.innerHTML = text.slice(selectionStart, selectionEnd);
+            div.innerHTML = `<pre class="hidden">${text.slice(0, selectionStart)}</pre>${pre.outerHTML}<pre class="hidden">${text.slice(selectionEnd)}</pre>`;
+            el.appendChild(div)
+        })
+    }
 
     getLineValue(index: number) {
         const line = this.value[index];
@@ -44,8 +81,8 @@ export default class State {
     add(key: string) {
         const prev = this.getValue(0, this.cursorY);
         const next = this.getValue(this.cursorY + 1);
-        const beforeCursor = this.value[this.cursorY].slice(0, this.cursorX - (!this.cursorY ? this.prefix.length : 0))
-        const afterCursor = this.value[this.cursorY].slice(this.cursorX - (!this.cursorY ? this.prefix.length : 0));
+        const beforeCursor = this.getLineValue(this.cursorY).slice(this.cursorY === 0 ? this.prefix.length : 0, this.cursorX);
+        const afterCursor = this.getLineValue(this.cursorY).slice(this.cursorX);
         this.value = [...prev, beforeCursor + key + afterCursor, ...next];
         this.cursorX += key.length;
     }
@@ -68,8 +105,11 @@ export default class State {
     remove() {
         if (!(this.cursorX - this.prefix.length) && !this.cursorY) { return; }
         if (!this.cursorX) {
+            const prev = this.getValue(this.cursorY - 1);
+            const next = this.getValue(this.cursorY + 1);
+            const curr = this.value[this.cursorY - 1] + this.value[this.cursorY]
             this.cursorX = this.value[this.cursorY - 1].length + (!(this.cursorY - 1) ? this.prefix.length : 0);
-            this.value = [...this.value.slice(0, this.cursorY - 1), this.value[this.cursorY - 1] + this.value[this.cursorY], ...this.value.slice(this.cursorY + 1)]
+            this.value = [...prev, curr, ...next];
             this.childrens = [...this.childrens.slice(0, this.cursorY - 1), ...this.childrens.slice(this.cursorY)];
             this.cursorY -= 1;
             return;

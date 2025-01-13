@@ -56,11 +56,18 @@ export default class Editor {
     onChange(fn: (value: string, event: KeyboardEvent, element: HTMLInputElement) => void) {
         const onInput = (e: KeyboardEvent) => {
             e.preventDefault();
-            if (e.ctrlKey) {
+            if (e.shiftKey) {
+                this.executeShiftAction(e);
+            }
+            else if (e.ctrlKey) {
                 this.executeCtrlAction(e);
             }
             else {
                 this.executeKeyAction(e);
+            }
+            if (!e.shiftKey && this.state.selectX >= 0) {
+                this.state.selectX = -1;
+                this.state.selectY = -1;
             }
             fn(this.state.value.join('\n'), e, e.currentTarget as HTMLInputElement)
             this.draw()
@@ -102,10 +109,29 @@ export default class Editor {
         return this.executeKeyAction(event)
     }
 
+    private executeShiftAction(event: KeyboardEvent) {
+        if (event.key === "Shift") return;
+
+        if (["ArrowRight", "ArrowLeft", "ArrowUp", "ArrowDown"].includes(event.key)) {
+            if (this.state.selectX < 0) {
+                this.state.startSelection();
+            }
+            return this.cursor.move(event.key.toLowerCase().slice("arrow".length) as "right" | "left" | "up" | "down");
+        }
+
+        return this.executeKeyAction(event)
+    }
+
     private draw() {
-        this.state.childrens.forEach(el => {
-            el.className = ""
-            const cursor = el.querySelector("div");
+        this.state.childrens.forEach((el, i) => {
+            if (!(this.state.selectY >= 0 && (i <= this.state.selectY && i >= this.state.cursorY || i <= this.state.cursorY && i >= this.state.selectY))) {
+                el.className = ""
+                const select = el.querySelector(".editor-selection-container");
+                if (select) {
+                    el.removeChild(select);
+                }
+            }
+            const cursor = el.querySelector(".editor-cursor-container");
             if (!cursor) return
             el.removeChild(cursor)
         })
@@ -117,6 +143,9 @@ export default class Editor {
 
         container.className = "active"
         container.appendChild(this.cursor.createCursor());
+        if (this.state.selectX >= 0) {
+            this.state.drawSelection()
+        }
         this.container.draw();
     }
 }
