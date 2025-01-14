@@ -56,10 +56,10 @@ export default class Editor {
     onChange(fn: (value: string, event: KeyboardEvent, element: HTMLInputElement) => void) {
         const onInput = (e: KeyboardEvent) => {
             e.preventDefault();
-            if (e.shiftKey) {
-                this.executeShiftAction(e);
+            if (e.shiftKey && this.state.selectX < 0) {
+                this.state.startSelection()
             }
-            else if (e.ctrlKey) {
+            if (e.ctrlKey) {
                 this.executeCtrlAction(e);
             }
             else {
@@ -109,19 +109,6 @@ export default class Editor {
         return this.executeKeyAction(event)
     }
 
-    private executeShiftAction(event: KeyboardEvent) {
-        if (event.key === "Shift") return;
-
-        if (["ArrowRight", "ArrowLeft", "ArrowUp", "ArrowDown"].includes(event.key)) {
-            if (this.state.selectX < 0) {
-                this.state.startSelection();
-            }
-            return this.cursor.move(event.key.toLowerCase().slice("arrow".length) as "right" | "left" | "up" | "down");
-        }
-
-        return this.executeKeyAction(event)
-    }
-
     private draw() {
         this.state.childrens.forEach((el, i) => {
             if (!(this.state.selectY >= 0 && (i <= this.state.selectY && i >= this.state.cursorY || i <= this.state.cursorY && i >= this.state.selectY))) {
@@ -131,15 +118,14 @@ export default class Editor {
                     el.removeChild(select);
                 }
             }
+            const content = this.state.lang.parse(this.state.getLineValue(i));
+            el.innerHTML = "<pre>" + content.join("") + "</pre>";
             const cursor = el.querySelector(".editor-cursor-container");
             if (!cursor) return
             el.removeChild(cursor)
         })
 
-        const content = this.state.lang.parse(this.state.getLineValue(this.state.cursorY));
         const container = this.state.childrens[this.state.cursorY];
-        container.innerHTML = "<pre>" + content.join("") + "</pre>";
-        container.className = "";
 
         container.className = "active"
         container.appendChild(this.cursor.createCursor());

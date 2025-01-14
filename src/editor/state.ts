@@ -56,6 +56,21 @@ export default class State {
         })
     }
 
+    removeSelection() {
+        const order = this.getSelectionOrder();
+        const prev = this.getValue(0, order.startY);
+        const next = this.getValue(order.endY + 1);
+
+        const curr = this.getValue(order.startY, order.endY + 1);
+        const start = curr[0].slice(0, order.startX - (!order.startY ? this.prefix.length : 0));
+        const end = curr.pop()?.slice(order.endX - (!order.endY ? this.prefix.length : 0));
+
+        this.value = [...prev, start + end, ...next]
+        if (this.childrens.length > this.value.length) {
+            this.childrens = this.childrens.slice(0, this.value.length);
+        }
+    }
+
     getLineValue(index: number) {
         const line = this.value[index];
         let value = "";
@@ -79,15 +94,23 @@ export default class State {
 
 
     add(key: string) {
+        if (this.selectX >= 0) {
+            this.removeSelection()
+        }
         const prev = this.getValue(0, this.cursorY);
         const next = this.getValue(this.cursorY + 1);
+
         const beforeCursor = this.getLineValue(this.cursorY).slice(this.cursorY === 0 ? this.prefix.length : 0, this.cursorX);
+
         const afterCursor = this.getLineValue(this.cursorY).slice(this.cursorX);
         this.value = [...prev, beforeCursor + key + afterCursor, ...next];
         this.cursorX += key.length;
     }
 
     breakLine() {
+        if (this.selectX >= 0) {
+            this.removeSelection()
+        }
         const line = this.getLineValue(this.cursorY);
         let space = line.length - line.trimStart().length;
         if ([...this.lang.openBrackets].some(bracket => line.trim().endsWith(bracket))) {
@@ -103,6 +126,10 @@ export default class State {
     }
 
     remove() {
+        if (this.selectX >= 0) {
+            this.removeSelection()
+            return;
+        }
         if (!(this.cursorX - this.prefix.length) && !this.cursorY) { return; }
         if (!this.cursorX) {
             const prev = this.getValue(this.cursorY - 1);
