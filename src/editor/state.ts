@@ -1,4 +1,3 @@
-import DOMElement from "../lib/dom";
 import Language from "./languages/language";
 import Theme from "./themes/theme";
 
@@ -15,7 +14,7 @@ export default class State {
     selectX: number = -1;
     selectY: number = -1;
 
-    constructor(public lang: Language, public theme: Theme, public element: DOMElement, public container: DOMElement) {
+    constructor(public lang: Language, public theme: Theme, public element: HTMLElement, public container: HTMLElement) {
     }
 
     startSelection() {
@@ -35,6 +34,24 @@ export default class State {
             startX,
             endX
         }
+    }
+
+    getSelectionValue() {
+        const order = this.getSelectionOrder();
+        const value = []
+        for (let i = order.startY; i <= order.endY; i++) {
+            let start = 0;
+            let end = -1;
+            if (i === order.startY) {
+                start = order.startX;
+            }
+            if (i === order.endY) {
+                end = order.endX;
+            }
+            value.push(this.getLineValue(i).slice(start, end));
+
+        }
+        return value
     }
 
     drawSelection() {
@@ -70,6 +87,7 @@ export default class State {
             this.childrens = this.childrens.slice(0, this.value.length);
         }
     }
+
 
     getLineValue(index: number) {
         const line = this.value[index];
@@ -132,12 +150,12 @@ export default class State {
         }
         if (!(this.cursorX - this.prefix.length) && !this.cursorY) { return; }
         if (!this.cursorX) {
-            const prev = this.getValue(this.cursorY - 1);
+            const prev = this.getValue(0, this.cursorY - 1);
             const next = this.getValue(this.cursorY + 1);
             const curr = this.value[this.cursorY - 1] + this.value[this.cursorY]
             this.cursorX = this.value[this.cursorY - 1].length + (!(this.cursorY - 1) ? this.prefix.length : 0);
             this.value = [...prev, curr, ...next];
-            this.childrens = [...this.childrens.slice(0, this.cursorY - 1), ...this.childrens.slice(this.cursorY)];
+            this.childrens.pop();
             this.cursorY -= 1;
             return;
         }

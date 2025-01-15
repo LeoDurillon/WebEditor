@@ -5,9 +5,9 @@ export default class Container {
     constructor(public state: State) { }
 
     draw() {
-        this.state.container.setInnerHTML("");
+        this.state.container.innerHTML = "";
         this.state.childrens.forEach(el =>
-            this.state.container.insertElement(el)
+            this.state.container.appendChild(el)
         )
     }
 }

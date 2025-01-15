@@ -26,6 +26,7 @@
 
 .active {
     position: relative;
+    min-height: 2ch;
 }
 
 .editor.editor-main:focus-within .editor-cursor-container {
