@@ -53,6 +53,24 @@ export default class Cursor {
         }
     }
 
+    moveToSelection(direction: "start" | "end") {
+        const order = this.state.getSelectionOrder();
+        switch (direction) {
+            case "start": {
+                this.state.cursorX = order.startX;
+                this.state.cursorY = order.startY;
+                break;
+            }
+
+            case "end": {
+                this.state.cursorX = order.endX;
+                this.state.cursorY = order.endY;
+                break;
+            }
+        }
+    }
+
+
     moveWord(direction: "right" | "left") {
 
         switch (direction) {

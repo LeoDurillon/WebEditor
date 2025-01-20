@@ -68,6 +68,9 @@ export default class Editor {
         fn: (value: string, event: Event, element: HTMLElement) => void
     ) {
         const onInput = (e: KeyboardEvent) => {
+            if (specials.includes(e.key)) {
+                e.preventDefault();
+            }
             if (e.shiftKey && e.key.includes("Arrow") && this.state.selectX < 0) {
                 this.state.startSelection();
             }
@@ -104,11 +107,18 @@ export default class Editor {
             this.draw();
         }
 
+        const onCopy = (e: ClipboardEvent) => {
+            e.preventDefault();
+            e.clipboardData?.setData('text', this.state.getSelectionValue().join('\n'));
+        }
+
         this.state.element.addEventListener("keydown", onInput);
         this.state.element.addEventListener("cut", onCut);
         this.state.element.addEventListener("paste", onPaste);
+        this.state.element.addEventListener("copy", onCopy);
         return this;
     }
+
 
     private executeKeyAction(event: KeyboardEvent) {
         if (event.key === "Enter") {
@@ -120,13 +130,18 @@ export default class Editor {
         if (
             ["ArrowRight", "ArrowLeft", "ArrowUp", "ArrowDown"].includes(event.key)
         ) {
-            return this.cursor.move(
-                event.key.toLowerCase().slice("arrow".length) as
-                | "right"
-                | "left"
-                | "up"
-                | "down"
-            );
+            if (!event.shiftKey && this.state.selectX >= 0 && ["ArrowRight", "ArrowLeft"].includes(event.key)) {
+
+                return this.cursor.moveToSelection(event.key === "ArrowRight" ? "end" : "start");
+            } else {
+                return this.cursor.move(
+                    event.key.toLowerCase().slice("arrow".length) as
+                    | "right"
+                    | "left"
+                    | "up"
+                    | "down"
+                );
+            }
         }
         if (event.key === "Tab") {
             return this.state.add(" ".repeat(this.state.lang.tabValue));
