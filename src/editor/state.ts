@@ -1,3 +1,4 @@
+import Cursor from "./cursor";
 import Language from "./languages/language";
 import Theme from "./themes/theme";
 
@@ -8,25 +9,19 @@ export default class State {
 
     prefix: string = ""
 
-    cursorX: number = 0
-    cursorY: number = 0
 
-    selectX: number = -1;
-    selectY: number = -1;
-
-    constructor(public lang: Language, public theme: Theme, public element: HTMLElement, public container: HTMLElement) {
+    constructor(public lang: Language, public theme: Theme, public element: HTMLElement, public container: HTMLElement, public cursor: Cursor) {
     }
 
     startSelection() {
-        this.selectX = this.cursorX;
-        this.selectY = this.cursorY;
+        this.cursor.startSelection();
     }
 
     getSelectionOrder() {
-        const startY = this.cursorY <= this.selectY ? this.cursorY : this.selectY;
-        const endY = this.cursorY >= this.selectY ? this.cursorY : this.selectY;
-        const startX = this.cursorY < this.selectY ? this.cursorX : this.cursorY > this.selectY ? this.selectX : this.cursorX < this.selectX ? this.cursorX : this.selectX;
-        const endX = this.cursorY < this.selectY ? this.selectX : this.cursorY > this.selectY ? this.cursorX : this.cursorX < this.selectX ? this.selectX : this.cursorX;
+        const startY = this.cursor.cursorY <= this.cursor.selectY ? this.cursor.cursorY : this.cursor.selectY;
+        const endY = this.cursor.cursorY >= this.cursor.selectY ? this.cursor.cursorY : this.cursor.selectY;
+        const startX = this.cursor.cursorY < this.cursor.selectY ? this.cursor.cursorX : this.cursor.cursorY > this.cursor.selectY ? this.cursor.selectX : this.cursor.cursorX < this.cursor.selectX ? this.cursor.cursorX : this.cursor.selectX;
+        const endX = this.cursor.cursorY < this.cursor.selectY ? this.cursor.selectX : this.cursor.cursorY > this.cursor.selectY ? this.cursor.cursorX : this.cursor.cursorX < this.cursor.selectX ? this.cursor.selectX : this.cursor.cursorX;
 
         return {
             startY,
@@ -112,24 +107,24 @@ export default class State {
 
 
     add(key: string) {
-        if (this.selectX >= 0) {
+        if (this.cursor.selectX >= 0) {
             this.removeSelection()
         }
-        const prev = this.getValue(0, this.cursorY);
-        const next = this.getValue(this.cursorY + 1);
+        const prev = this.getValue(0, this.cursor.cursorY);
+        const next = this.getValue(this.cursor.cursorY + 1);
 
-        const beforeCursor = this.getLineValue(this.cursorY).slice(this.cursorY === 0 ? this.prefix.length : 0, this.cursorX);
+        const beforeCursor = this.getLineValue(this.cursor.cursorY).slice(this.cursor.cursorY === 0 ? this.prefix.length : 0, this.cursor.cursorX);
 
-        const afterCursor = this.getLineValue(this.cursorY).slice(this.cursorX);
+        const afterCursor = this.getLineValue(this.cursor.cursorY).slice(this.cursor.cursorX);
         this.value = [...prev, beforeCursor + key + afterCursor, ...next];
-        this.cursorX += key.length;
+        this.cursor.cursorX += key.length;
     }
 
     breakLine() {
-        if (this.selectX >= 0) {
+        if (this.cursor.selectX >= 0) {
             this.removeSelection()
         }
-        const line = this.getLineValue(this.cursorY);
+        const line = this.getLineValue(this.cursor.cursorY);
         let space = line.length - line.trimStart().length;
         if ([...this.lang.openBrackets].some(bracket => line.trim().endsWith(bracket))) {
             space += this.lang.tabValue
@@ -139,32 +134,32 @@ export default class State {
         }
         this.value.push(" ".repeat(space));
         this.childrens.push(document.createElement("div"));
-        this.cursorY += 1;
-        this.cursorX = space;
+        this.cursor.cursorY += 1;
+        this.cursor.cursorX = space;
     }
 
     remove() {
-        if (this.selectX >= 0) {
+        if (this.cursor.selectX >= 0) {
             this.removeSelection()
             return;
         }
-        if (!(this.cursorX - this.prefix.length) && !this.cursorY) { return; }
-        if (!this.cursorX) {
-            const prev = this.getValue(0, this.cursorY - 1);
-            const next = this.getValue(this.cursorY + 1);
-            const curr = this.value[this.cursorY - 1] + this.value[this.cursorY]
-            this.cursorX = this.value[this.cursorY - 1].length + (!(this.cursorY - 1) ? this.prefix.length : 0);
+        if (!(this.cursor.cursorX - this.prefix.length) && !this.cursor.cursorY) { return; }
+        if (!this.cursor.cursorX) {
+            const prev = this.getValue(0, this.cursor.cursorY - 1);
+            const next = this.getValue(this.cursor.cursorY + 1);
+            const curr = this.value[this.cursor.cursorY - 1] + this.value[this.cursor.cursorY]
+            this.cursor.cursorX = this.value[this.cursor.cursorY - 1].length + (!(this.cursor.cursorY - 1) ? this.prefix.length : 0);
             this.value = [...prev, curr, ...next];
             this.childrens.pop();
-            this.cursorY -= 1;
+            this.cursor.cursorY -= 1;
             return;
         }
 
-        const prev = this.getValue(0, this.cursorY);
-        const next = this.getValue(this.cursorY + 1);
-        const beforeCursor = this.value[this.cursorY].slice(0, this.cursorX - 1 - (!this.cursorY ? this.prefix.length : 0))
-        const afterCursor = this.value[this.cursorY].slice(this.cursorX - (!this.cursorY ? this.prefix.length : 0));
+        const prev = this.getValue(0, this.cursor.cursorY);
+        const next = this.getValue(this.cursor.cursorY + 1);
+        const beforeCursor = this.value[this.cursor.cursorY].slice(0, this.cursor.cursorX - 1 - (!this.cursor.cursorY ? this.prefix.length : 0))
+        const afterCursor = this.value[this.cursor.cursorY].slice(this.cursor.cursorX - (!this.cursor.cursorY ? this.prefix.length : 0));
         this.value = [...prev, beforeCursor + afterCursor, ...next];
-        this.cursorX -= 1;
+        this.cursor.cursorX -= 1;
     }
 }

@@ -1,5 +1,6 @@
 import Container from "./container";
 import Cursor from "./cursor";
+import draw from "./draw";
 import "./editor.css";
 import createElement from "./element";
 import createLanguage from "./languages/languageBuilder";
@@ -24,7 +25,6 @@ const specials = [
 export default class Editor {
     private container: Container;
     private state: State;
-    private cursor: Cursor;
 
     constructor(
         element: string | HTMLElement,
@@ -54,12 +54,11 @@ export default class Editor {
         );
         selected.appendChild(editor);
         const container = document.querySelector("#container") as HTMLElement;
-        console.log(container)
-        this.state = new State(lang, theme, document.querySelector("#app")!, container);
+        const cursor = new Cursor();
+        this.state = new State(lang, theme, document.querySelector("#app")!, container, cursor);
         this.state.prefix = options?.prefix ?? "";
-        this.state.cursorX = options?.prefix?.length ?? 0;
+        this.state.cursor.cursorX = options?.prefix?.length ?? 0;
 
-        this.cursor = new Cursor(this.state);
         this.container = new Container(this.state);
         this.draw();
     }
@@ -71,7 +70,7 @@ export default class Editor {
             if (specials.includes(e.key)) {
                 e.preventDefault();
             }
-            if (e.shiftKey && e.key.includes("Arrow") && this.state.selectX < 0) {
+            if (e.shiftKey && e.key.includes("Arrow") && this.state.cursor.selectX < 0) {
                 this.state.startSelection();
             }
             if (e.ctrlKey) {
@@ -79,9 +78,9 @@ export default class Editor {
             } else {
                 this.executeKeyAction(e);
             }
-            if (!e.shiftKey && !e.ctrlKey && this.state.selectX >= 0) {
-                this.state.selectX = -1;
-                this.state.selectY = -1;
+            if (!e.shiftKey && !e.ctrlKey && this.state.cursor.selectX >= 0) {
+                this.state.cursor.selectX = -1;
+                this.state.cursor.selectY = -1;
             }
             fn(this.state.value.join("\n"), e, e.currentTarget as HTMLElement);
             this.draw();
@@ -130,11 +129,12 @@ export default class Editor {
         if (
             ["ArrowRight", "ArrowLeft", "ArrowUp", "ArrowDown"].includes(event.key)
         ) {
-            if (!event.shiftKey && this.state.selectX >= 0 && ["ArrowRight", "ArrowLeft"].includes(event.key)) {
+            if (!event.shiftKey && this.state.cursor.selectX >= 0 && ["ArrowRight", "ArrowLeft"].includes(event.key)) {
 
-                return this.cursor.moveToSelection(event.key === "ArrowRight" ? "end" : "start");
+                return this.state.cursor.moveToSelection(this.state, event.key === "ArrowRight" ? "end" : "start");
             } else {
-                return this.cursor.move(
+                return this.state.cursor.move(
+                    this.state,
                     event.key.toLowerCase().slice("arrow".length) as
                     | "right"
                     | "left"
@@ -154,7 +154,8 @@ export default class Editor {
         if (event.key === "Control") return;
 
         if (["ArrowRight", "ArrowLeft"].includes(event.key)) {
-            return this.cursor.moveWord(
+            return this.state.cursor.moveWord(
+                this.state,
                 event.key.toLowerCase().slice("arrow".length) as "right" | "left"
             );
         }
@@ -167,34 +168,7 @@ export default class Editor {
     }
 
     private draw() {
-        this.state.childrens.forEach((el, i) => {
-            if (
-                !(
-                    this.state.selectY >= 0 &&
-                    ((i <= this.state.selectY && i >= this.state.cursorY) ||
-                        (i <= this.state.cursorY && i >= this.state.selectY))
-                )
-            ) {
-                el.className = "";
-                const select = el.querySelector(".editor-selection-container");
-                if (select) {
-                    el.removeChild(select);
-                }
-            }
-            const content = this.state.lang.parse(this.state.getLineValue(i));
-            el.innerHTML = "<pre>" + content.join("") + "</pre>";
-            const cursor = el.querySelector(".editor-cursor-container");
-            if (!cursor) return;
-            el.removeChild(cursor);
-        });
-
-        const container = this.state.childrens[this.state.cursorY];
-
-        container.className = "active";
-        container.appendChild(this.cursor.createCursor());
-        if (this.state.selectX >= 0) {
-            this.state.drawSelection();
-        }
+        draw(this.state);
         this.container.draw();
     }
 }

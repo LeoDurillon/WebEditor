@@ -30,6 +30,7 @@
 
 .active {
     position: relative;
+    min-height: 2ch;
 }
 
 .editor.editor-main:focus-within .editor-cursor-container {
@@ -43,7 +44,7 @@
 
 
 .cursor {
-    height: 13px;
+    height: 50%;
     width: 1px;
     flex-shrink: 0;
     animation: blink 1s steps(3, end) infinite
